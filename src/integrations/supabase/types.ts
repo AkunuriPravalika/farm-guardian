@@ -14,16 +14,185 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alerts: {
+        Row: {
+          body: string
+          channel: string
+          id: string
+          sent_at: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel?: string
+          id?: string
+          sent_at?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          id?: string
+          sent_at?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          crop: string
+          farm_size_acres: number | null
+          full_name: string
+          id: string
+          latitude: number | null
+          location_name: string
+          longitude: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crop?: string
+          farm_size_acres?: number | null
+          full_name?: string
+          id: string
+          latitude?: number | null
+          location_name?: string
+          longitude?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crop?: string
+          farm_size_acres?: number | null
+          full_name?: string
+          id?: string
+          latitude?: number | null
+          location_name?: string
+          longitude?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      risk_predictions: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          insurance_reason: string | null
+          insurance_recommended: boolean
+          risk_level: string
+          risk_score: number
+          risk_type: string
+          user_id: string
+          weather_reading_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          insurance_reason?: string | null
+          insurance_recommended?: boolean
+          risk_level: string
+          risk_score: number
+          risk_type: string
+          user_id: string
+          weather_reading_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          insurance_reason?: string | null
+          insurance_recommended?: boolean
+          risk_level?: string
+          risk_score?: number
+          risk_type?: string
+          user_id?: string
+          weather_reading_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_predictions_weather_reading_id_fkey"
+            columns: ["weather_reading_id"]
+            isOneToOne: false
+            referencedRelation: "weather_readings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      weather_readings: {
+        Row: {
+          fetched_at: string
+          forecast_json: Json | null
+          humidity_pct: number | null
+          id: string
+          rainfall_mm: number | null
+          temperature_c: number | null
+          user_id: string
+          wind_kph: number | null
+        }
+        Insert: {
+          fetched_at?: string
+          forecast_json?: Json | null
+          humidity_pct?: number | null
+          id?: string
+          rainfall_mm?: number | null
+          temperature_c?: number | null
+          user_id: string
+          wind_kph?: number | null
+        }
+        Update: {
+          fetched_at?: string
+          forecast_json?: Json | null
+          humidity_pct?: number | null
+          id?: string
+          rainfall_mm?: number | null
+          temperature_c?: number | null
+          user_id?: string
+          wind_kph?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "farmer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +319,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "farmer"],
+    },
   },
 } as const
