@@ -117,7 +117,19 @@ export function FarmProfileForm({ initial, onSaved }: Props) {
       </div>
       <div>
         <Label>Crop</Label>
-        <Input required placeholder="e.g. Wheat, Rice, Cotton" value={form.crop} onChange={(e) => setForm({ ...form, crop: e.target.value })} />
+        <select
+          required
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={form.crop}
+          onChange={(e) => setForm({ ...form, crop: e.target.value })}
+        >
+          <option value="">Select a crop…</option>
+          <option value="rice">Rice</option>
+          <option value="wheat">Wheat</option>
+          <option value="cotton">Cotton</option>
+          <option value="tomato">Tomato</option>
+          <option value="maize">Maize</option>
+        </select>
       </div>
       <div>
         <Label>Farm size (acres)</Label>
