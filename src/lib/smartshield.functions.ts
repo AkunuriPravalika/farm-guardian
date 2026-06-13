@@ -318,3 +318,75 @@ export const promoteSelfToAdmin = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const seedDemoData = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const weatherRows = [];
+    const predRows = [];
+    const alertRows = [];
+    for (let i = 29; i >= 0; i--) {
+      const fetched_at = new Date(now - i * day).toISOString();
+      // Simulate seasonal pattern
+      const base = 28 + Math.sin(i / 4) * 6;
+      const temperature_c = +(base + (Math.random() - 0.5) * 4).toFixed(1);
+      const rainfall_mm = +Math.max(0, (Math.random() < 0.3 ? Math.random() * 40 : Math.random() * 3)).toFixed(1);
+      const humidity_pct = +(50 + Math.random() * 40).toFixed(0);
+      const wind_kph = +(5 + Math.random() * 20).toFixed(1);
+      const forecast = Array.from({ length: 7 }, (_, k) => ({
+        date: new Date(now - (i - k) * day).toISOString().slice(0, 10),
+        tmax: +(temperature_c + Math.random() * 4).toFixed(1),
+        tmin: +(temperature_c - 4 - Math.random() * 3).toFixed(1),
+        rain: +(Math.random() < 0.3 ? Math.random() * 30 : Math.random() * 2).toFixed(1),
+      }));
+      weatherRows.push({ user_id: userId, fetched_at, temperature_c, rainfall_mm, humidity_pct, wind_kph, forecast_json: forecast });
+    }
+    const { data: wInserted, error: wErr } = await supabase.from("weather_readings").insert(weatherRows).select();
+    if (wErr) throw new Error(wErr.message);
+
+    for (const w of wInserted ?? []) {
+      const totalRain = (w.forecast_json as Array<{ rain: number }>).reduce((s, d) => s + d.rain, 0);
+      const maxT = Math.max(...(w.forecast_json as Array<{ tmax: number }>).map((d) => d.tmax));
+      let risk_score = 15;
+      let risk_type: string = "normal";
+      const reasons: string[] = [];
+      if (totalRain < 5) { risk_type = "drought"; risk_score = 65 + Math.random() * 20; reasons.push(`Only ${totalRain.toFixed(1)}mm rain in 7 days.`); }
+      else if (totalRain > 80) { risk_type = "heavy_rainfall"; risk_score = 70 + Math.random() * 25; reasons.push(`Heavy rain: ${totalRain.toFixed(0)}mm.`); }
+      if (maxT > 40) { risk_type = risk_type === "normal" ? "heatwave" : "mixed"; risk_score = Math.max(risk_score, 70 + Math.random() * 20); reasons.push(`Peak temp ${maxT.toFixed(0)}°C.`); }
+      else if (risk_type === "normal") { risk_score = 10 + Math.random() * 25; }
+      const risk_level = risk_score >= 80 ? "critical" : risk_score >= 60 ? "high" : risk_score >= 35 ? "moderate" : "low";
+      const insurance_recommended = risk_score >= 60;
+      predRows.push({
+        user_id: userId,
+        weather_reading_id: w.id,
+        risk_level,
+        risk_type,
+        risk_score: +risk_score.toFixed(0),
+        explanation: reasons.join(" ") || `Stable conditions. Weekly rain ${totalRain.toFixed(1)}mm, peak ${maxT.toFixed(0)}°C.`,
+        insurance_recommended,
+        insurance_reason: insurance_recommended
+          ? `Activate insurance: ${risk_type.replace("_", " ")} risk detected.`
+          : "No insurance action needed.",
+        created_at: w.fetched_at,
+      });
+      if (insurance_recommended) {
+        alertRows.push({
+          user_id: userId,
+          channel: "email",
+          subject: `SmartShield Alert: ${risk_level.toUpperCase()} ${risk_type.replace("_", " ")} risk`,
+          body: `${reasons.join(" ")}\n\nInsurance: activate now.`,
+          sent_at: w.fetched_at,
+        });
+      }
+    }
+    const { error: pErr } = await supabase.from("risk_predictions").insert(predRows);
+    if (pErr) throw new Error(pErr.message);
+    if (alertRows.length > 0) {
+      const { error: aErr } = await supabase.from("alerts").insert(alertRows);
+      if (aErr) throw new Error(aErr.message);
+    }
+    return { weather: weatherRows.length, predictions: predRows.length, alerts: alertRows.length };
+  });

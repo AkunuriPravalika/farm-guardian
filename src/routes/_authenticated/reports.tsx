@@ -5,6 +5,7 @@ import { getReports } from "@/lib/smartshield.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "Historical reports — SmartShield" }] }),
@@ -27,6 +28,47 @@ function Reports() {
       <SiteHeader />
       <div className="container mx-auto px-4 py-8 space-y-6">
         <h1 className="text-3xl font-bold">Historical reports</h1>
+
+        {q.data && (q.data.weather.length > 0 || q.data.predictions.length > 0) && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card>
+              <CardHeader><CardTitle>Temperature trend</CardTitle></CardHeader>
+              <CardContent className="h-56">
+                <ResponsiveContainer>
+                  <LineChart data={[...q.data.weather].reverse().map((w) => ({ date: new Date(w.fetched_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), temp: Number(w.temperature_c ?? 0) }))}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="date" /><YAxis /><Tooltip />
+                    <Line type="monotone" dataKey="temp" stroke="oklch(0.65 0.22 27)" strokeWidth={2} name="°C" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Rainfall trend</CardTitle></CardHeader>
+              <CardContent className="h-56">
+                <ResponsiveContainer>
+                  <BarChart data={[...q.data.weather].reverse().map((w) => ({ date: new Date(w.fetched_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), rain: Number(w.rainfall_mm ?? 0) }))}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="date" /><YAxis /><Tooltip />
+                    <Bar dataKey="rain" fill="oklch(0.48 0.14 220)" name="mm" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Risk score trend</CardTitle></CardHeader>
+              <CardContent className="h-56">
+                <ResponsiveContainer>
+                  <LineChart data={[...q.data.predictions].reverse().map((p) => ({ date: new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), score: Number(p.risk_score) }))}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="date" /><YAxis domain={[0, 100]} /><Tooltip />
+                    <Line type="monotone" dataKey="score" stroke="oklch(0.6 0.22 30)" strokeWidth={2} name="Risk" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Card>
           <CardHeader><CardTitle>Past risk predictions</CardTitle></CardHeader>
