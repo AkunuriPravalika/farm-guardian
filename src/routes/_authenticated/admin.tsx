@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, ShieldAlert, BellRing, BarChart3 } from "lucide-react";
+import { Users, ShieldAlert, BellRing, BarChart3, Gauge } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
@@ -61,9 +61,10 @@ function Admin() {
       <div className="container mx-auto px-4 py-8 space-y-6">
         <h1 className="text-3xl font-bold">Admin dashboard</h1>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Stat icon={<Users className="h-5 w-5" />} label="Farmers" value={s?.total_farmers ?? 0} />
-          <Stat icon={<BarChart3 className="h-5 w-5" />} label="Predictions" value={s?.total_predictions ?? 0} />
+          <Stat icon={<BarChart3 className="h-5 w-5" />} label="Risk analyses" value={s?.total_predictions ?? 0} />
+          <Stat icon={<Gauge className="h-5 w-5" />} label="Avg risk score" value={s?.average_risk_score ?? 0} />
           <Stat icon={<ShieldAlert className="h-5 w-5" />} label="Insurance recommended" value={s?.insurance_recommended_count ?? 0} />
           <Stat icon={<BellRing className="h-5 w-5" />} label="Alerts sent" value={s?.total_alerts ?? 0} />
         </div>

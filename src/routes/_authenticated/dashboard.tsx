@@ -2,12 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDashboard, runRiskAnalysis, getMyProfile, seedDemoData } from "@/lib/smartshield.functions";
+import { deriveRiskInsights, formatINR } from "@/lib/risk-insights";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FarmProfileForm } from "@/components/FarmProfileForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, CloudRain, Wind, Droplets, ShieldCheck, ShieldAlert, Sparkles, BellRing } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Thermometer, CloudRain, Wind, Droplets, ShieldCheck, ShieldAlert, Sparkles, BellRing, Sprout } from "lucide-react";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from "recharts";
 
@@ -116,39 +118,65 @@ function Dashboard() {
               <StatCard icon={<Wind className="h-5 w-5" />} label="Wind" value={`${Number(w?.wind_kph ?? 0).toFixed(1)} kph`} />
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Risk assessment</CardTitle>
-                  <Badge className={levelColor[pred.risk_level] ?? ""}>{pred.risk_level.toUpperCase()}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">{Number(pred.risk_score).toFixed(0)}</span>
-                    <span className="text-muted-foreground">/ 100 risk score</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Type: <strong className="text-foreground">{pred.risk_type.replace("_", " ")}</strong></p>
-                  <p className="text-sm">{pred.explanation}</p>
-                </CardContent>
-              </Card>
+            {(() => {
+              const insights = deriveRiskInsights(pred, w, p?.crop, p?.farm_size_acres);
+              return (
+                <>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Risk assessment</CardTitle>
+                        <Badge className={levelColor[pred.risk_level] ?? ""}>{pred.risk_level.toUpperCase()}</Badge>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold">{Number(pred.risk_score).toFixed(0)}</span>
+                          <span className="text-muted-foreground">/ 100 risk score</span>
+                          <span className="ml-auto text-xs text-muted-foreground">Confidence {insights.confidence_pct}%</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Type: <strong className="text-foreground capitalize">{pred.risk_type.replace("_", " ")}</strong></p>
+                        <p className="text-sm">{pred.explanation}</p>
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="text-xs font-semibold uppercase text-muted-foreground">Factor contributions</div>
+                          <Contribution label="Temperature" value={insights.temperature_contribution} />
+                          <Contribution label="Rainfall" value={insights.rainfall_contribution} />
+                          <Contribution label="Humidity" value={insights.humidity_contribution} />
+                        </div>
+                        <p className="text-xs text-muted-foreground italic">{insights.justification}</p>
+                      </CardContent>
+                    </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Insurance recommendation</CardTitle>
-                  {pred.insurance_recommended ? (
-                    <ShieldAlert className="h-6 w-6 text-destructive" />
-                  ) : (
-                    <ShieldCheck className="h-6 w-6 text-success" />
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-xl font-semibold">
-                    {pred.insurance_recommended ? "Activate insurance now" : "No action needed"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{pred.insurance_reason}</p>
-                </CardContent>
-              </Card>
-            </div>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Insurance recommendation</CardTitle>
+                        {pred.insurance_recommended ? (
+                          <ShieldAlert className="h-6 w-6 text-destructive" />
+                        ) : (
+                          <ShieldCheck className="h-6 w-6 text-success" />
+                        )}
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-xl font-semibold">
+                          {pred.insurance_recommended ? "Activate insurance now" : "No action needed"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{pred.insurance_reason}</p>
+                        {pred.insurance_recommended && (
+                          <div className="rounded-lg border bg-muted/40 p-3 space-y-1">
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">Estimated coverage</div>
+                            <div className="text-2xl font-bold text-primary">{formatINR(insights.coverage_amount)}</div>
+                            <div className="text-xs text-muted-foreground">Based on {p?.farm_size_acres ?? 1} acre(s) of {insights.crop.name}.</div>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-2 pt-2 text-xs text-muted-foreground border-t">
+                          <Sprout className="h-4 w-4 mt-0.5 text-primary" />
+                          <span><strong>{insights.crop.name} impact:</strong> {insights.crop.notes}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              );
+            })()}
 
             {forecast.length > 0 && (
               <div className="grid gap-4 lg:grid-cols-2">
@@ -239,5 +267,17 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <div className="mt-2 text-2xl font-bold">{value}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function Contribution({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{value}%</span>
+      </div>
+      <Progress value={value} className="h-1.5" />
+    </div>
   );
 }
