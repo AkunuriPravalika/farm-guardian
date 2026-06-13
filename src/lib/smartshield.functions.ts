@@ -286,10 +286,14 @@ export const getAdminStats = createServerFn({ method: "GET" })
     const byLevel: Record<string, number> = { low: 0, moderate: 0, high: 0, critical: 0 };
     const byType: Record<string, number> = {};
     let insuranceCount = 0;
+    let scoreSum = 0;
+    let scoreN = 0;
     for (const p of preds) {
       byLevel[p.risk_level] = (byLevel[p.risk_level] ?? 0) + 1;
       byType[p.risk_type] = (byType[p.risk_type] ?? 0) + 1;
       if (p.insurance_recommended) insuranceCount++;
+      const s = Number((p as { risk_score?: number | string }).risk_score ?? NaN);
+      if (Number.isFinite(s)) { scoreSum += s; scoreN++; }
     }
     return {
       farmers: farmersR.data ?? [],
@@ -297,6 +301,7 @@ export const getAdminStats = createServerFn({ method: "GET" })
       total_predictions: preds.length,
       total_alerts: (alertsR.data ?? []).length,
       insurance_recommended_count: insuranceCount,
+      average_risk_score: scoreN ? Math.round(scoreSum / scoreN) : 0,
       by_level: byLevel,
       by_type: byType,
       recent: recentR.data ?? [],
