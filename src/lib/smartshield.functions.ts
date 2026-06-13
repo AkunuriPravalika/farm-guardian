@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { getCropProfile } from "./risk-insights";
 
 const ProfileInput = z.object({
   full_name: z.string().min(1).max(120),
@@ -86,26 +87,30 @@ interface AiRisk {
 }
 
 function ruleBasedRisk(w: WeatherSummary, crop: string): AiRisk {
+  const c = getCropProfile(crop);
   const totalRain = w.forecast.reduce((s, d) => s + (d.rain ?? 0), 0);
   const maxTemp = Math.max(...w.forecast.map((d) => d.tmax));
-  const hot = w.forecast.filter((d) => d.tmax > 38).length;
+  const hot = w.forecast.filter((d) => d.tmax > c.heat_threshold).length;
   let risk_type: AiRisk["risk_type"] = "normal";
   let risk_score = 15;
   const reasons: string[] = [];
-  if (totalRain < 5) {
+  if (totalRain < c.drought_mm) {
     risk_type = "drought";
-    risk_score = Math.max(risk_score, 65);
-    reasons.push(`Only ${totalRain.toFixed(1)}mm rain expected in next 7 days.`);
-  }
-  if (totalRain > 120) {
-    risk_type = risk_type === "drought" ? "mixed" : "heavy_rainfall";
-    risk_score = Math.max(risk_score, 75);
-    reasons.push(`Heavy rainfall expected: ${totalRain.toFixed(0)}mm over the week.`);
-  }
-  if (hot >= 3 || maxTemp > 42) {
-    risk_type = risk_type === "normal" ? "heatwave" : "mixed";
     risk_score = Math.max(risk_score, 70);
-    reasons.push(`Heatwave conditions: ${hot} day(s) above 38°C, peak ${maxTemp.toFixed(0)}°C.`);
+    reasons.push(`Only ${totalRain.toFixed(1)}mm rain expected; ${c.name} needs at least ${c.weekly_rain[0]}mm/week.`);
+  } else if (totalRain < c.weekly_rain[0]) {
+    risk_score = Math.max(risk_score, 45);
+    reasons.push(`Rainfall ${totalRain.toFixed(0)}mm is below ${c.name}'s ideal minimum (${c.weekly_rain[0]}mm).`);
+  }
+  if (totalRain > c.flood_mm) {
+    risk_type = risk_type === "drought" ? "mixed" : "heavy_rainfall";
+    risk_score = Math.max(risk_score, 78);
+    reasons.push(`Heavy rainfall ${totalRain.toFixed(0)}mm exceeds ${c.name}'s safe ceiling (${c.weekly_rain[1]}mm).`);
+  }
+  if (hot >= 3 || maxTemp > c.heat_threshold + 4) {
+    risk_type = risk_type === "normal" ? "heatwave" : "mixed";
+    risk_score = Math.max(risk_score, 72);
+    reasons.push(`Heatwave: ${hot} day(s) above ${c.heat_threshold}°C, peak ${maxTemp.toFixed(0)}°C.`);
   }
   const risk_level: AiRisk["risk_level"] =
     risk_score >= 80 ? "critical" : risk_score >= 60 ? "high" : risk_score >= 35 ? "moderate" : "low";
@@ -116,11 +121,11 @@ function ruleBasedRisk(w: WeatherSummary, crop: string): AiRisk {
     risk_score,
     explanation:
       reasons.join(" ") ||
-      `Conditions look stable for ${crop || "your crop"}. Weekly rain ${totalRain.toFixed(1)}mm, peak temp ${maxTemp.toFixed(0)}°C.`,
+      `Conditions look stable for ${c.name}. Weekly rain ${totalRain.toFixed(1)}mm, peak temp ${maxTemp.toFixed(0)}°C.`,
     insurance_recommended,
     insurance_reason: insurance_recommended
-      ? `Activate insurance: forecasted ${risk_type.replace("_", " ")} risk for ${crop || "the crop"}.`
-      : "Insurance activation not recommended right now.",
+      ? `Activate insurance: forecasted ${risk_type.replace("_", " ")} risk for ${c.name}.`
+      : `Insurance activation not recommended right now for ${c.name}.`,
   };
 }
 
