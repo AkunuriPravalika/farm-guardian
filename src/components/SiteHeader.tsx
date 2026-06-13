@@ -28,7 +28,9 @@ export function SiteHeader() {
           <Sprout className="h-6 w-6" />
           <span>SmartShield</span>
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-3 text-sm">
+        <nav className="flex items-center gap-1 sm:gap-2 text-sm">
+          <Link to="/architecture" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Architecture</Link>
+          <Link to="/documentation" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Docs</Link>
           {email ? (
             <>
               <Link to="/dashboard" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Dashboard</Link>
@@ -37,10 +39,7 @@ export function SiteHeader() {
               <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
             </>
           ) : (
-            <>
-              <Link to="/" className="px-2 py-1 hover:text-primary">Home</Link>
-              <Link to="/auth" className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:opacity-90">Sign in</Link>
-            </>
+            <Link to="/auth" className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:opacity-90">Sign in</Link>
           )}
         </nav>
       </div>
