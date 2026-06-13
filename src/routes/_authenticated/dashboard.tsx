@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDashboard, runRiskAnalysis, getMyProfile } from "@/lib/smartshield.functions";
+import { getDashboard, runRiskAnalysis, getMyProfile, seedDemoData } from "@/lib/smartshield.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FarmProfileForm } from "@/components/FarmProfileForm";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ function Dashboard() {
   const dashFn = useServerFn(getDashboard);
   const profileFn = useServerFn(getMyProfile);
   const analyze = useServerFn(runRiskAnalysis);
+  const seed = useServerFn(seedDemoData);
   const qc = useQueryClient();
 
   const dash = useQuery({ queryKey: ["dashboard"], queryFn: () => dashFn() });
@@ -37,6 +38,16 @@ function Dashboard() {
     onSuccess: () => {
       toast.success("Risk analysis updated");
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const seedMut = useMutation({
+    mutationFn: () => seed(),
+    onSuccess: (r) => {
+      toast.success(`Seeded ${r.predictions} demo predictions & ${r.alerts} alerts`);
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["reports"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -59,10 +70,15 @@ function Dashboard() {
             </p>
           </div>
           {hasProfile && (
-            <Button onClick={() => runMut.mutate()} disabled={runMut.isPending}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              {runMut.isPending ? "Analyzing…" : "Run AI risk analysis"}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => seedMut.mutate()} disabled={seedMut.isPending}>
+                {seedMut.isPending ? "Seeding…" : "Load demo data"}
+              </Button>
+              <Button onClick={() => runMut.mutate()} disabled={runMut.isPending}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {runMut.isPending ? "Analyzing…" : "Run AI risk analysis"}
+              </Button>
+            </div>
           )}
         </div>
 
