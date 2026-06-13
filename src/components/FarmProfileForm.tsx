@@ -31,18 +31,35 @@ export function FarmProfileForm({ initial, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
 
+  async function reverseGeocode(lat: number, lon: number): Promise<string> {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12`);
+      const j = await r.json();
+      const a = j.address || {};
+      return (
+        a.village || a.town || a.city || a.hamlet || a.suburb || a.county || a.state || j.display_name || ""
+      );
+    } catch {
+      return "";
+    }
+  }
+
   function useMyLocation() {
     if (!navigator.geolocation) return toast.error("Geolocation not supported");
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const place = await reverseGeocode(lat, lon);
         setForm((f) => ({
           ...f,
-          latitude: pos.coords.latitude.toFixed(5),
-          longitude: pos.coords.longitude.toFixed(5),
+          latitude: lat.toFixed(5),
+          longitude: lon.toFixed(5),
+          location_name: place || f.location_name,
         }));
         setLocating(false);
-        toast.success("Location captured");
+        toast.success(place ? `Location: ${place}` : "Location captured");
       },
       (err) => {
         setLocating(false);
@@ -50,6 +67,7 @@ export function FarmProfileForm({ initial, onSaved }: Props) {
       },
     );
   }
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

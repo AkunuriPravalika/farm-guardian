@@ -150,17 +150,22 @@ Assess the weather risk to this crop. Consider drought (low rainfall), heavy rai
 - risk_score 0-100 (higher = more dangerous)
 - insurance_recommended = true ONLY if risk_score >= 60
 - Explanation must be 2 short sentences, plain language a farmer understands.`;
-    const { output } = await generateText({
+    const aiPromise = generateText({
       model: gateway("google/gemini-3-flash-preview"),
       output: Output.object({ schema }),
       prompt,
     });
-    return output as AiRisk;
+    const result = await Promise.race([
+      aiPromise,
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("AI timeout")), 15000)),
+    ]);
+    return (result as { output: AiRisk }).output;
   } catch (e) {
     console.error("AI risk fallback:", e);
     return ruleBasedRisk(w, crop);
   }
 }
+
 
 export const runRiskAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -175,6 +180,10 @@ export const runRiskAnalysis = createServerFn({ method: "POST" })
     if (!profile || profile.latitude == null || profile.longitude == null) {
       throw new Error("Please complete your farm profile first.");
     }
+    if (Math.abs(Number(profile.latitude)) < 0.01 && Math.abs(Number(profile.longitude)) < 0.01) {
+      throw new Error("Invalid farm coordinates. Please update your profile with a real location (use 📍 Use my current location).");
+    }
+
     const weather = await fetchOpenMeteo(
       Number(profile.latitude),
       Number(profile.longitude),

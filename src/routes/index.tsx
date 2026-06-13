@@ -29,17 +29,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-16">
-        <div className="rounded-2xl p-10 text-center text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>
-          <h2 className="text-3xl font-bold">Start protecting your farm in 60 seconds</h2>
-          <p className="mt-3 opacity-90">Create an account, add your farm location and crop, and get your first risk report.</p>
-          <Link to="/auth" className="mt-6 inline-block rounded-md bg-background px-5 py-2.5 text-sm font-semibold text-primary hover:opacity-90">Create free account</Link>
-        </div>
-      </section>
-
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} SmartShield. Built with Lovable.
-      </footer>
     </div>
   );
 }
+
