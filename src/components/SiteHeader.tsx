@@ -29,8 +29,6 @@ export function SiteHeader() {
           <span>SmartShield</span>
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2 text-sm">
-          <Link to="/architecture" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Architecture</Link>
-          <Link to="/documentation" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Docs</Link>
           {email ? (
             <>
               <Link to="/dashboard" className="px-2 py-1 hover:text-primary" activeProps={{ className: "px-2 py-1 text-primary font-semibold" }}>Dashboard</Link>
