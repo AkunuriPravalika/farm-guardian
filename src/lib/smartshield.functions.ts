@@ -259,11 +259,16 @@ export const getReports = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const [w, p] = await Promise.all([
-      supabase.from("weather_readings").select("*").eq("user_id", userId).order("fetched_at", { ascending: false }).limit(30),
-      supabase.from("risk_predictions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
+    const [w, p, prof] = await Promise.all([
+      supabase.from("weather_readings").select("*").eq("user_id", userId).order("fetched_at", { ascending: false }).limit(100),
+      supabase.from("risk_predictions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(100),
+      supabase.from("profiles").select("full_name,location_name,crop").eq("id", userId).maybeSingle(),
     ]);
-    return { weather: w.data ?? [], predictions: p.data ?? [] };
+    return {
+      weather: w.data ?? [],
+      predictions: p.data ?? [],
+      farmer: prof.data,
+    };
   });
 
 export const getAdminStats = createServerFn({ method: "GET" })
@@ -311,20 +316,11 @@ export const getAdminStats = createServerFn({ method: "GET" })
 export const promoteSelfToAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // Demo helper: lets the first signed-in user grant themselves admin if no admin exists.
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: existing } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "admin")
-      .limit(1);
-    if (existing && existing.length > 0) {
-      throw new Error("An admin already exists.");
-    }
     const { error } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: userId, role: "admin" });
+      .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

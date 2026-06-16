@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDashboard, runRiskAnalysis, getMyProfile, seedDemoData } from "@/lib/smartshield.functions";
@@ -234,25 +234,7 @@ function Dashboard() {
               </CardContent>
             </Card>
 
-            <div className="text-center">
-              <Link to="/reports" className="text-sm text-primary hover:underline">View full history →</Link>
-            </div>
           </>
-        )}
-
-        {hasProfile && (
-          <details className="rounded-lg border bg-card p-4">
-            <summary className="cursor-pointer font-medium">Update farm profile</summary>
-            <div className="pt-4">
-              <FarmProfileForm
-                initial={profile.data?.profile}
-                onSaved={() => {
-                  qc.invalidateQueries({ queryKey: ["dashboard"] });
-                  qc.invalidateQueries({ queryKey: ["my-profile"] });
-                }}
-              />
-            </div>
-          </details>
         )}
       </div>
     </div>

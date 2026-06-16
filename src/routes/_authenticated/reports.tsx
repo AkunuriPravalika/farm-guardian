@@ -5,7 +5,6 @@ import { getReports } from "@/lib/smartshield.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "Historical reports — SmartShield" }] }),
@@ -23,52 +22,20 @@ function Reports() {
   const fn = useServerFn(getReports);
   const q = useQuery({ queryKey: ["reports"], queryFn: () => fn() });
 
+  const farmerName = q.data?.farmer?.full_name || "Farmer";
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <div className="container mx-auto px-4 py-8 space-y-6">
-        <h1 className="text-3xl font-bold">Historical reports</h1>
-
-        {q.data && (q.data.weather.length > 0 || q.data.predictions.length > 0) && (
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card>
-              <CardHeader><CardTitle>Temperature trend</CardTitle></CardHeader>
-              <CardContent className="h-56">
-                <ResponsiveContainer>
-                  <LineChart data={[...q.data.weather].reverse().map((w) => ({ date: new Date(w.fetched_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), temp: Number(w.temperature_c ?? 0) }))}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="date" /><YAxis /><Tooltip />
-                    <Line type="monotone" dataKey="temp" stroke="oklch(0.65 0.22 27)" strokeWidth={2} name="°C" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Rainfall trend</CardTitle></CardHeader>
-              <CardContent className="h-56">
-                <ResponsiveContainer>
-                  <BarChart data={[...q.data.weather].reverse().map((w) => ({ date: new Date(w.fetched_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), rain: Number(w.rainfall_mm ?? 0) }))}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="date" /><YAxis /><Tooltip />
-                    <Bar dataKey="rain" fill="oklch(0.48 0.14 220)" name="mm" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Risk score trend</CardTitle></CardHeader>
-              <CardContent className="h-56">
-                <ResponsiveContainer>
-                  <LineChart data={[...q.data.predictions].reverse().map((p) => ({ date: new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), score: Number(p.risk_score) }))}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="date" /><YAxis domain={[0, 100]} /><Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="oklch(0.6 0.22 30)" strokeWidth={2} name="Risk" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <div>
+          <h1 className="text-3xl font-bold">Historical reports</h1>
+          {q.data?.farmer && (
+            <p className="text-muted-foreground text-sm mt-1">
+              {farmerName} • {q.data.farmer.location_name} • {q.data.farmer.crop}
+            </p>
+          )}
+        </div>
 
         <Card>
           <CardHeader><CardTitle>Past risk predictions</CardTitle></CardHeader>
@@ -79,16 +46,27 @@ function Reports() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-left text-muted-foreground border-b">
-                    <tr><th className="py-2">Date</th><th>Level</th><th>Type</th><th>Score</th><th>Insurance</th><th>Notes</th></tr>
+                    <tr>
+                      <th className="py-2 pr-3">Farmer</th>
+                      <th className="pr-3">Date</th>
+                      <th className="pr-3">Level</th>
+                      <th className="pr-3">Type</th>
+                      <th className="pr-3">Score</th>
+                      <th className="pr-3">Insurance</th>
+                      <th className="pr-3">Reason</th>
+                      <th>Explanation</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {q.data!.predictions.map((p) => (
-                      <tr key={p.id} className="border-b last:border-0">
-                        <td className="py-2">{new Date(p.created_at).toLocaleString()}</td>
-                        <td><Badge className={levelColor[p.risk_level] ?? ""}>{p.risk_level}</Badge></td>
-                        <td className="capitalize">{p.risk_type.replace("_", " ")}</td>
-                        <td>{Number(p.risk_score).toFixed(0)}</td>
-                        <td>{p.insurance_recommended ? "✅ Yes" : "—"}</td>
+                      <tr key={p.id} className="border-b last:border-0 align-top">
+                        <td className="py-2 pr-3">{farmerName}</td>
+                        <td className="pr-3 whitespace-nowrap">{new Date(p.created_at).toLocaleString()}</td>
+                        <td className="pr-3"><Badge className={levelColor[p.risk_level] ?? ""}>{p.risk_level}</Badge></td>
+                        <td className="pr-3 capitalize">{p.risk_type.replace("_", " ")}</td>
+                        <td className="pr-3 font-medium">{Number(p.risk_score).toFixed(0)}</td>
+                        <td className="pr-3">{p.insurance_recommended ? "✅ Yes" : "—"}</td>
+                        <td className="pr-3 max-w-xs text-muted-foreground">{p.insurance_reason}</td>
                         <td className="max-w-md text-muted-foreground">{p.explanation}</td>
                       </tr>
                     ))}
@@ -108,15 +86,23 @@ function Reports() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-left text-muted-foreground border-b">
-                    <tr><th className="py-2">Fetched</th><th>Temp °C</th><th>Rain mm</th><th>Humidity %</th><th>Wind kph</th></tr>
+                    <tr>
+                      <th className="py-2 pr-3">Fetched by</th>
+                      <th className="pr-3">Fetched at</th>
+                      <th className="pr-3">Temp °C</th>
+                      <th className="pr-3">Rain mm</th>
+                      <th className="pr-3">Humidity %</th>
+                      <th>Wind kph</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {q.data!.weather.map((w) => (
                       <tr key={w.id} className="border-b last:border-0">
-                        <td className="py-2">{new Date(w.fetched_at).toLocaleString()}</td>
-                        <td>{Number(w.temperature_c ?? 0).toFixed(1)}</td>
-                        <td>{Number(w.rainfall_mm ?? 0).toFixed(1)}</td>
-                        <td>{Number(w.humidity_pct ?? 0).toFixed(0)}</td>
+                        <td className="py-2 pr-3 font-medium">{farmerName}</td>
+                        <td className="pr-3 whitespace-nowrap">{new Date(w.fetched_at).toLocaleString()}</td>
+                        <td className="pr-3">{Number(w.temperature_c ?? 0).toFixed(1)}</td>
+                        <td className="pr-3">{Number(w.rainfall_mm ?? 0).toFixed(1)}</td>
+                        <td className="pr-3">{Number(w.humidity_pct ?? 0).toFixed(0)}</td>
                         <td>{Number(w.wind_kph ?? 0).toFixed(1)}</td>
                       </tr>
                     ))}
