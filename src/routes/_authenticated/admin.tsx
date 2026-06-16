@@ -61,12 +61,13 @@ function Admin() {
       <div className="container mx-auto px-4 py-8 space-y-6">
         <h1 className="text-3xl font-bold">Admin dashboard</h1>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <Stat icon={<Users className="h-5 w-5" />} label="Farmers" value={s?.total_farmers ?? 0} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+          <Stat icon={<Users className="h-5 w-5" />} label="Total farmers" value={s?.total_farmers ?? 0} />
           <Stat icon={<BarChart3 className="h-5 w-5" />} label="Risk analyses" value={s?.total_predictions ?? 0} />
           <Stat icon={<Gauge className="h-5 w-5" />} label="Avg risk score" value={s?.average_risk_score ?? 0} />
           <Stat icon={<ShieldAlert className="h-5 w-5" />} label="Insurance recommended" value={s?.insurance_recommended_count ?? 0} />
           <Stat icon={<BellRing className="h-5 w-5" />} label="Alerts sent" value={s?.total_alerts ?? 0} />
+          <Stat icon={<Users className="h-5 w-5" />} label="Farmers alerted" value={s?.total_alert_recipients ?? 0} />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -120,6 +121,35 @@ function Admin() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Alerts sent — recipients</CardTitle></CardHeader>
+          <CardContent>
+            {(s?.recent_alerts ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No alerts have been sent yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-muted-foreground border-b">
+                    <tr><th className="py-2">Farmer</th><th>Location</th><th>Crop</th><th>Channel</th><th>Subject</th><th>Sent</th></tr>
+                  </thead>
+                  <tbody>
+                    {(s?.recent_alerts ?? []).map((a) => (
+                      <tr key={a.id} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{a.farmer_name}</td>
+                        <td>{a.location_name || "—"}</td>
+                        <td>{a.crop || "—"}</td>
+                        <td><Badge variant="outline">{a.channel}</Badge></td>
+                        <td>{a.subject}</td>
+                        <td className="text-xs text-muted-foreground">{new Date(a.sent_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
 

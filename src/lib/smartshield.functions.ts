@@ -281,13 +281,16 @@ export const getAdminStats = createServerFn({ method: "GET" })
     });
     if (!isAdmin) throw new Error("Forbidden: admin only");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [farmersR, predsR, alertsR, recentR] = await Promise.all([
+    const [farmersR, predsR, alertsR, recentR, recentAlertsR] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,full_name,location_name,crop,created_at").order("created_at", { ascending: false }),
       supabaseAdmin.from("risk_predictions").select("risk_level,risk_type,insurance_recommended,created_at"),
-      supabaseAdmin.from("alerts").select("id"),
+      supabaseAdmin.from("alerts").select("id,user_id"),
       supabaseAdmin.from("risk_predictions").select("*").order("created_at", { ascending: false }).limit(10),
+      supabaseAdmin.from("alerts").select("id,user_id,subject,channel,sent_at").order("sent_at", { ascending: false }).limit(15),
     ]);
     const preds = predsR.data ?? [];
+    const farmers = farmersR.data ?? [];
+    const farmerMap = new Map(farmers.map((f) => [f.id, f]));
     const byLevel: Record<string, number> = { low: 0, moderate: 0, high: 0, critical: 0 };
     const byType: Record<string, number> = {};
     let insuranceCount = 0;
@@ -300,16 +303,32 @@ export const getAdminStats = createServerFn({ method: "GET" })
       const s = Number((p as { risk_score?: number | string }).risk_score ?? NaN);
       if (Number.isFinite(s)) { scoreSum += s; scoreN++; }
     }
+    const allAlerts = alertsR.data ?? [];
+    const alertRecipientIds = new Set(allAlerts.map((a) => a.user_id));
+    const recentAlerts = (recentAlertsR.data ?? []).map((a) => {
+      const f = farmerMap.get(a.user_id);
+      return {
+        id: a.id,
+        subject: a.subject,
+        channel: a.channel,
+        sent_at: a.sent_at,
+        farmer_name: f?.full_name || "Unknown farmer",
+        location_name: f?.location_name || "",
+        crop: f?.crop || "",
+      };
+    });
     return {
-      farmers: farmersR.data ?? [],
-      total_farmers: (farmersR.data ?? []).length,
+      farmers,
+      total_farmers: farmers.length,
       total_predictions: preds.length,
-      total_alerts: (alertsR.data ?? []).length,
+      total_alerts: allAlerts.length,
+      total_alert_recipients: alertRecipientIds.size,
       insurance_recommended_count: insuranceCount,
       average_risk_score: scoreN ? Math.round(scoreSum / scoreN) : 0,
       by_level: byLevel,
       by_type: byType,
       recent: recentR.data ?? [],
+      recent_alerts: recentAlerts,
     };
   });
 

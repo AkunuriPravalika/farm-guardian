@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Cloud, Brain, Gauge, ShieldCheck, BellRing } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -13,14 +12,6 @@ export const Route = createFileRoute("/")({
   }),
   component: Home,
 });
-
-const flow = [
-  { icon: Cloud, label: "Weather Monitoring" },
-  { icon: Brain, label: "AI Risk Prediction" },
-  { icon: ShieldCheck, label: "Insurance Recommendation" },
-  { icon: BellRing, label: "Farmer Alerts" },
-  { icon: Gauge, label: "Historical Reports" },
-];
 
 function Home() {
   return (
@@ -38,21 +29,6 @@ function Home() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link to="/auth" className="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">Get started free</Link>
           </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-12">
-        <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-6">The SmartShield Workflow</h2>
-        <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-          {flow.map((s, i) => (
-            <div key={s.label} className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 shadow-sm">
-                <s.icon className="h-4 w-4 text-primary" />
-                <span className="font-medium">{s.label}</span>
-              </div>
-              {i < flow.length - 1 && <span className="text-muted-foreground">→</span>}
-            </div>
-          ))}
         </div>
       </section>
     </div>
